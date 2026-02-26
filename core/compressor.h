@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_COMPRESSOR_H
 #define ZIPBIKE_COMPRESSOR_H
 
+class compressor {};
 
-
-class compressor {
-
-};
-
-
-
-#endif //ZIPBIKE_COMPRESSOR_H
+#endif // ZIPBIKE_COMPRESSOR_H

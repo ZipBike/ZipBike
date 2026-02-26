@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_RLE_H
 #define ZIPBIKE_RLE_H
 
+class rle {};
 
-
-class rle {
-
-};
-
-
-
-#endif //ZIPBIKE_RLE_H
+#endif // ZIPBIKE_RLE_H

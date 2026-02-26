@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_BITSTREAM_H
 #define ZIPBIKE_BITSTREAM_H
 
+class bitstream {};
 
-
-class bitstream {
-
-};
-
-
-
-#endif //ZIPBIKE_BITSTREAM_H
+#endif // ZIPBIKE_BITSTREAM_H

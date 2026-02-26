@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_HUFFMAN_H
 #define ZIPBIKE_HUFFMAN_H
 
+class huffman {};
 
-
-class huffman {
-
-};
-
-
-
-#endif //ZIPBIKE_HUFFMAN_H
+#endif // ZIPBIKE_HUFFMAN_H

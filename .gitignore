@@ -39,3 +39,16 @@
 
 # debug information files
 *.dwo
+.idea/
+
+# CMake / Build directories
+build/
+cmake-build-*/
+out/
+bin/
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Makefile
+cmake_install.cmake
+compile_commands.json

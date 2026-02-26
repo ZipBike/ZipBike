@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_CLI_PARSER_H
 #define ZIPBIKE_CLI_PARSER_H
 
+class cli_parser {};
 
-
-class cli_parser {
-
-};
-
-
-
-#endif //ZIPBIKE_CLI_PARSER_H
+#endif // ZIPBIKE_CLI_PARSER_H

@@ -5,12 +5,6 @@
 #ifndef ZIPBIKE_CONTAINER_H
 #define ZIPBIKE_CONTAINER_H
 
+class container {};
 
-
-class container {
-
-};
-
-
-
-#endif //ZIPBIKE_CONTAINER_H
+#endif // ZIPBIKE_CONTAINER_H

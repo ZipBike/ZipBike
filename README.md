@@ -1,4 +1,4 @@
-# Universal Compressor
+# ZipBike
 
 A modular high-performance compression engine
 supporting RLE, Huffman and LZ77 algorithms.
