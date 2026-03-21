@@ -21,19 +21,26 @@ public:
 
     container();
 
+  
     container(CompressionType type, std::vector<uint8_t> compressedData, int originalSize);
 
+    // Setters
     void setData(std::vector<uint8_t> compressedData);
     void setType(CompressionType type);
     void setOriginalSize(int size);
+    void setFileName(std::string name); 
 
+    // Getters
     std::vector<uint8_t> getData();
     CompressionType getType();
     int getOriginalSize();
     int getCompressedSize();
+    std::string getFileName();
+
 
     bool isEmpty();
 
+ 
     void clear();
 
 private:
@@ -41,6 +48,7 @@ private:
     std::vector<uint8_t> data;
     CompressionType type;
     int originalSize;
+    std::string fileName;
 };
 
 #endif // ZIPBIKE_CONTAINER_H
