@@ -7,7 +7,6 @@
 
 #include <string>
 #include <map>
-#include <queue>
 
 class huffman {
 
@@ -25,16 +24,19 @@ class huffman {
         bool operator()(node* a, node* b);
     };
 
-    std::map<char, int> frequancies;
+    std::map<char, int> frequencies;
     std::map<char, std::string> huffmanCode;
     node* root;
 
-    void printHuffmanCode(node* node, std::string code);
-    void createHuffmanFreq(std::string& text);
+    void printHuffmanCode(node* node, const std::string& code);
+    void buildHuffmanTree();
+    void createHuffmanTree(const std::string& text);
 
     public:
 
-    void createHuffmanTree(const std::string& text);
+    void compressFile(const std::string& inputF, const std::string& outputF);
+    void decompressFile(const std::string& inputF, const std::string& outputF);
+
 };
 
 #endif // ZIPBIKE_HUFFMAN_H
