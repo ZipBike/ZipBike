@@ -1,42 +1,48 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #ifndef ZIPBIKE_HUFFMAN_H
 #define ZIPBIKE_HUFFMAN_H
 
 #include <string>
-#include <map>
+#include <array>
+#include <vector>
+#include <cstdint>
 
 class huffman {
 
     struct node {
-        char ch;
-        int freq;
+        uint8_t ch;
+        uint64_t freq;
         node *left;
         node *right;
 
-        node(char c, int freq);
-        node(char ch, int freq, node* left, node* right);
+        node(uint8_t ch, uint64_t freq);
+        node(uint8_t ch, uint64_t freq, node* left, node* right);
     };
 
     struct compare {
         bool operator()(node* a, node* b);
     };
 
-    std::map<char, int> frequencies;
-    std::map<char, std::string> huffmanCode;
+    std::array<uint64_t, 256> frequencies;
+    std::array<std::string, 256> huffmanCode;
     node* root;
 
-    void printHuffmanCode(node* node, const std::string& code);
     void buildHuffmanTree();
-    void createHuffmanTree(const std::string& text);
+    void buildCodes(node* n, const std::string& code);
+    void freeTree(node* n);
 
-    public:
+public:
+
+    huffman();
+    ~huffman();
+
+    huffman(const huffman&) = delete;
+    huffman& operator=(const huffman&) = delete;
+
+    std::vector<uint8_t> compress(const std::vector<uint8_t>& input);
+    std::vector<uint8_t> decompress(const std::vector<uint8_t>& input);
 
     void compressFile(const std::string& inputF, const std::string& outputF);
     void decompressFile(const std::string& inputF, const std::string& outputF);
-
 };
 
-#endif // ZIPBIKE_HUFFMAN_H
+#endif

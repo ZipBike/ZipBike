@@ -1,7 +1,3 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #ifndef ZIPBIKE_CONTAINER_H
 #define ZIPBIKE_CONTAINER_H
 
@@ -21,34 +17,32 @@ public:
 
     container();
 
-  
-    container(CompressionType type, std::vector<uint8_t> compressedData, int originalSize);
+    container(CompressionType type, std::vector<uint8_t> compressedData, uint64_t originalSize);
 
-    // Setters
     void setData(std::vector<uint8_t> compressedData);
     void setType(CompressionType type);
-    void setOriginalSize(int size);
-    void setFileName(std::string name); 
+    void setOriginalSize(uint64_t size);
+    void setOriginalCrc(uint32_t crc);
+    void setFileName(std::string name);
 
-    // Getters
-    std::vector<uint8_t> getData();
-    CompressionType getType();
-    int getOriginalSize();
-    int getCompressedSize();
-    std::string getFileName();
+    const std::vector<uint8_t>& getData() const;
+    CompressionType getType() const;
+    uint64_t getOriginalSize() const;
+    uint32_t getOriginalCrc() const;
+    uint64_t getCompressedSize() const;
+    std::string getFileName() const;
 
+    bool isEmpty() const;
 
-    bool isEmpty();
-
- 
     void clear();
 
 private:
 
     std::vector<uint8_t> data;
     CompressionType type;
-    int originalSize;
+    uint64_t originalSize;
+    uint32_t originalCrc;
     std::string fileName;
 };
 
-#endif // ZIPBIKE_CONTAINER_H
+#endif

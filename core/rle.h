@@ -1,10 +1,14 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #ifndef ZIPBIKE_RLE_H
 #define ZIPBIKE_RLE_H
 
-class rle {};
+#include <vector>
+#include <cstdint>
 
-#endif // ZIPBIKE_RLE_H
+class rle {
+public:
+
+    std::vector<uint8_t> compress(const std::vector<uint8_t>& input);
+    std::vector<uint8_t> decompress(const std::vector<uint8_t>& input);
+};
+
+#endif

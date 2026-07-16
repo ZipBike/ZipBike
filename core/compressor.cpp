@@ -1,19 +1,14 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #include "compressor.h"
 #include "rle.h"
 #include "lz77.h"
 #include "huffman.h"
+#include "crc32.h"
 #include <iostream>
 
 compressor::compressor() {
-    // Nothing to set up for now
 }
 
-
-container compressor::compress(std::vector<uint8_t> inputData, CompressionType type) {
+container compressor::compress(const std::vector<uint8_t>& inputData, CompressionType type) {
 
     std::vector<uint8_t> result;
 
@@ -30,14 +25,53 @@ container compressor::compress(std::vector<uint8_t> inputData, CompressionType t
         result = inputData;
     }
 
-  
-    return container(type, result, inputData.size());
+    container c(type, std::move(result), inputData.size());
+    c.setOriginalCrc(crc32(inputData));
+    return c;
 }
 
+container compressor::compressAuto(const std::vector<uint8_t>& inputData) {
 
-std::vector<uint8_t> compressor::decompress(container& c) {
+    CompressionType bestType = NONE;
+    std::vector<uint8_t> bestData;
+    size_t bestSize = inputData.size();
+    bool beatStored = false;
 
-    std::vector<uint8_t> data = c.getData();
+    CompressionType candidates[] = { RLE, LZ77, HUFFMAN };
+
+    for (CompressionType type : candidates) {
+
+        std::vector<uint8_t> attempt;
+        if (type == RLE) {
+            attempt = compressRLE(inputData);
+        }
+        else if (type == LZ77) {
+            attempt = compressLZ77(inputData);
+        }
+        else {
+            attempt = compressHuffman(inputData);
+        }
+
+        if (attempt.size() < bestSize) {
+            bestType = type;
+            bestSize = attempt.size();
+            bestData = std::move(attempt);
+            beatStored = true;
+        }
+    }
+
+    if (!beatStored) {
+        bestData = inputData;
+    }
+
+    container c(bestType, std::move(bestData), inputData.size());
+    c.setOriginalCrc(crc32(inputData));
+    return c;
+}
+
+std::vector<uint8_t> compressor::decompress(const container& c) {
+
+    const std::vector<uint8_t>& data = c.getData();
 
     if (c.getType() == RLE) {
         return decompressRLE(data);
@@ -52,42 +86,52 @@ std::vector<uint8_t> compressor::decompress(container& c) {
     return data;
 }
 
-void compressor::printStats(container& c) {
+void compressor::printStats(const container& c) {
+    std::cout << "Algorithm:       " << typeName(c.getType()) << std::endl;
     std::cout << "Original size:   " << c.getOriginalSize() << " bytes" << std::endl;
     std::cout << "Compressed size: " << c.getCompressedSize() << " bytes" << std::endl;
 
-    float ratio = (float)c.getCompressedSize() / c.getOriginalSize() * 100;
-    std::cout << "Compression ratio: " << ratio << "%" << std::endl;
+    if (c.getOriginalSize() > 0) {
+        double ratio = static_cast<double>(c.getCompressedSize()) / c.getOriginalSize() * 100.0;
+        std::cout << "Compression ratio: " << ratio << "%" << std::endl;
+    }
 }
 
-// --- Private helpers (they call your actual algorithm classes) ---
+const char* compressor::typeName(CompressionType type) {
+    switch (type) {
+        case RLE:     return "rle";
+        case LZ77:    return "lz77";
+        case HUFFMAN: return "huffman";
+        default:      return "none";
+    }
+}
 
-std::vector<uint8_t> compressor::compressRLE(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::compressRLE(const std::vector<uint8_t>& data) {
     rle r;
     return r.compress(data);
 }
 
-std::vector<uint8_t> compressor::compressLZ77(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::compressLZ77(const std::vector<uint8_t>& data) {
     lz77 l;
     return l.compress(data);
 }
 
-std::vector<uint8_t> compressor::compressHuffman(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::compressHuffman(const std::vector<uint8_t>& data) {
     huffman h;
     return h.compress(data);
 }
 
-std::vector<uint8_t> compressor::decompressRLE(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::decompressRLE(const std::vector<uint8_t>& data) {
     rle r;
     return r.decompress(data);
 }
 
-std::vector<uint8_t> compressor::decompressLZ77(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::decompressLZ77(const std::vector<uint8_t>& data) {
     lz77 l;
     return l.decompress(data);
 }
 
-std::vector<uint8_t> compressor::decompressHuffman(std::vector<uint8_t>& data) {
+std::vector<uint8_t> compressor::decompressHuffman(const std::vector<uint8_t>& data) {
     huffman h;
     return h.decompress(data);
 }

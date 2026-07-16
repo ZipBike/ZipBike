@@ -1,63 +1,65 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #include "container.h"
 
 container::container() {
     type = NONE;
     originalSize = 0;
+    originalCrc = 0;
     fileName = "";
 }
 
-container::container(CompressionType type, std::vector<uint8_t> compressedData, int originalSize) {
+container::container(CompressionType type, std::vector<uint8_t> compressedData, uint64_t originalSize) {
     this->type = type;
-    this->data = compressedData;
+    this->data = std::move(compressedData);
     this->originalSize = originalSize;
+    this->originalCrc = 0;
     this->fileName = "";
 }
 
-// --- Setters ---
-
 void container::setData(std::vector<uint8_t> compressedData) {
-    data = compressedData;
+    data = std::move(compressedData);
 }
 
 void container::setType(CompressionType type) {
     this->type = type;
 }
 
-void container::setOriginalSize(int size) {
+void container::setOriginalSize(uint64_t size) {
     originalSize = size;
 }
 
-void container::setFileName(std::string name) {
-    fileName = name;
+void container::setOriginalCrc(uint32_t crc) {
+    originalCrc = crc;
 }
 
-// --- Getters ---
+void container::setFileName(std::string name) {
+    fileName = std::move(name);
+}
 
-std::vector<uint8_t> container::getData() {
+const std::vector<uint8_t>& container::getData() const {
     return data;
 }
 
-CompressionType container::getType() {
+CompressionType container::getType() const {
     return type;
 }
 
-int container::getOriginalSize() {
+uint64_t container::getOriginalSize() const {
     return originalSize;
 }
 
-int container::getCompressedSize() {
+uint32_t container::getOriginalCrc() const {
+    return originalCrc;
+}
+
+uint64_t container::getCompressedSize() const {
     return data.size();
 }
 
-std::string container::getFileName() {
+std::string container::getFileName() const {
     return fileName;
 }
 
-bool container::isEmpty() {
+bool container::isEmpty() const {
     return data.empty();
 }
 
@@ -65,5 +67,6 @@ void container::clear() {
     data.clear();
     type = NONE;
     originalSize = 0;
+    originalCrc = 0;
     fileName = "";
 }

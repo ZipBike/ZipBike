@@ -1,150 +1,293 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #include "huffman.h"
+#include "bitstream.h"
+#include <queue>
 #include <iostream>
 #include <fstream>
-#include <sstream>
-using namespace std;
 
-huffman::node::node(char ch, int freq) : ch(ch), freq(freq), left(nullptr), right(nullptr) {}
-huffman::node::node(char ch, int freq, node* left, node* right) : ch(ch), freq(freq), left(left), right(right) {}
+namespace {
 
-bool huffman::compare::operator()(node* left, node* right) {
-    return left->freq > right->freq;
+    void writeU16(std::vector<uint8_t>& out, uint16_t value) {
+        out.push_back(static_cast<uint8_t>(value & 0xFF));
+        out.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+    }
+
+    void writeU64(std::vector<uint8_t>& out, uint64_t value) {
+        for (int i = 0; i < 8; i++) {
+            out.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+        }
+    }
+
+    uint16_t readU16(const std::vector<uint8_t>& in, size_t pos) {
+        return static_cast<uint16_t>(in[pos]) |
+               static_cast<uint16_t>(in[pos + 1] << 8);
+    }
+
+    uint64_t readU64(const std::vector<uint8_t>& in, size_t pos) {
+        uint64_t value = 0;
+        for (int i = 0; i < 8; i++) {
+            value |= static_cast<uint64_t>(in[pos + i]) << (8 * i);
+        }
+        return value;
+    }
 }
 
-void huffman::createHuffmanTree(const string& text) {
-   frequencies.clear();
-    for (char ch : text) {
-        frequencies[ch]++;
+huffman::node::node(uint8_t ch, uint64_t freq)
+    : ch(ch), freq(freq), left(nullptr), right(nullptr) {}
+
+huffman::node::node(uint8_t ch, uint64_t freq, node* left, node* right)
+    : ch(ch), freq(freq), left(left), right(right) {}
+
+bool huffman::compare::operator()(node* a, node* b) {
+    if (a->freq != b->freq) {
+        return a->freq > b->freq;
     }
-    buildHuffmanTree();
+    return a->ch > b->ch;
+}
+
+huffman::huffman() : root(nullptr) {
+    frequencies.fill(0);
+}
+
+huffman::~huffman() {
+    freeTree(root);
+}
+
+void huffman::freeTree(node* n) {
+    if (n == nullptr) {
+        return;
+    }
+    freeTree(n->left);
+    freeTree(n->right);
+    delete n;
 }
 
 void huffman::buildHuffmanTree() {
-    priority_queue<node*, vector<node*>, compare> pq;
-    for (auto& [ch, freq] : frequencies) {
-        pq.push(new node(ch, freq));
+
+    freeTree(root);
+    root = nullptr;
+    for (std::string& code : huffmanCode) {
+        code.clear();
     }
+
+    std::priority_queue<node*, std::vector<node*>, compare> pq;
+    for (int i = 0; i < 256; i++) {
+        if (frequencies[i] > 0) {
+            pq.push(new node(static_cast<uint8_t>(i), frequencies[i]));
+        }
+    }
+
+    if (pq.empty()) {
+        return;
+    }
+
     while (pq.size() > 1) {
         node* left = pq.top();
         pq.pop();
         node* right = pq.top();
         pq.pop();
-        pq.push(new node('\0', left->freq + right->freq, left, right));
+        pq.push(new node(0, left->freq + right->freq, left, right));
     }
+
     root = pq.top();
-    huffmanCode.clear();
-    printHuffmanCode(root, "");
+
+    if (root->left == nullptr && root->right == nullptr) {
+        huffmanCode[root->ch] = "0";
+    }
+    else {
+        buildCodes(root, "");
+    }
 }
 
-void huffman::printHuffmanCode(node* node, const string& code) {
-    if (node == nullptr){return;}
-    if (node->left == nullptr && node->right == nullptr) {
-        huffmanCode[node->ch] = code;
+void huffman::buildCodes(node* n, const std::string& code) {
+    if (n == nullptr) {
         return;
     }
-    printHuffmanCode(node->left, code + "0");
-    printHuffmanCode(node->right, code + "1");
+    if (n->left == nullptr && n->right == nullptr) {
+        huffmanCode[n->ch] = code;
+        return;
+    }
+    buildCodes(n->left, code + "0");
+    buildCodes(n->right, code + "1");
 }
 
-void huffman::compressFile(const std::string& inputF, const std::string& outputF) {
-    ifstream in(inputF.c_str(), ios::binary);
-    if (!in.is_open()) {
-        cerr << "Could not open file " << inputF << endl;
-        return;
-    }
-    stringstream buffer;
-    buffer << in.rdbuf();
-    string text = buffer.str();
-    in.close();
-    createHuffmanTree(text);
-    string output;
-    for (char c : text) {
-        output += huffmanCode[c];
-    }
-    ofstream out(outputF.c_str(), ios::binary);
-    if (!out.is_open()) {
-        cerr << "Could not open file " << outputF << endl;
-        return;
-    }
-    size_t padding = (8 - (output.length() % 8)) % 8;
-    auto paddingByte = static_cast<unsigned char>(padding);
-    out.write(reinterpret_cast<char*>(&paddingByte), 1);
-    size_t mapSize = frequencies.size();
-    out.write(reinterpret_cast<char*>(&mapSize), sizeof(size_t));
-    for (auto& pair : frequencies) {
-        out.write(reinterpret_cast<const char*>(&pair.first), sizeof(char));
-        out.write(reinterpret_cast<const char*>(&pair.second), sizeof(int));
-    }
-    for (size_t i = 0; i < output.length(); i+=8) {
-        string byteText = output.substr(i, 8);
-        while (byteText.length() < 8) {
-            byteText.append("0");
-        }
-        auto byte = static_cast<unsigned char>(stoul(byteText, nullptr, 2));
-        out.write(reinterpret_cast<char*>(&byte), 1);
-    }
-    out.close();
-    cout << "The file is successfully compressed" << endl;
-}
+std::vector<uint8_t> huffman::compress(const std::vector<uint8_t>& input) {
 
-void huffman::decompressFile(const std::string& inputF, const std::string& outputF) {
-    ifstream in(inputF.c_str(), ios::binary);
-    if (!in.is_open()) {
-        cerr << "Could not open file " << inputF << endl;
-        return;
+    frequencies.fill(0);
+    for (uint8_t byte : input) {
+        frequencies[byte]++;
     }
-    unsigned char paddingByte;
-    in.read(reinterpret_cast<char*>(&paddingByte), 1);
-    int padding = static_cast<unsigned char>(paddingByte);
-    size_t mapSize;
-    in.read(reinterpret_cast<char*>(&mapSize), sizeof(size_t));
-    frequencies.clear();
-    for (size_t i = 0; i < mapSize; i++) {
-        char ch;
-        int freq;
-        in.read(reinterpret_cast<char*>(&ch), sizeof(char));
-        in.read(reinterpret_cast<char*>(&freq), sizeof(int));
-        frequencies[ch] = freq;
-    }
+
     buildHuffmanTree();
-    string text;
-    char byte;
-    while (in.read(&byte, 1)) {
-        for (int i = 7; i >= 0; i--) {
-            if (byte >> i & 1) {
-                text += '1';
-            }else {
-                text += '0';
-            }
+
+    uint16_t symbolCount = 0;
+    for (int i = 0; i < 256; i++) {
+        if (frequencies[i] > 0) {
+            symbolCount++;
         }
     }
-    in.close();
-    if (padding > 0 && text.length() >= padding) {
-        text.erase(text.length() - padding, padding);
+
+    std::vector<uint8_t> output;
+    writeU16(output, symbolCount);
+
+    for (int i = 0; i < 256; i++) {
+        if (frequencies[i] > 0) {
+            output.push_back(static_cast<uint8_t>(i));
+            writeU64(output, frequencies[i]);
+        }
     }
-    string finalText;
+
+    bitstream bits;
+    for (uint8_t byte : input) {
+        const std::string& code = huffmanCode[byte];
+        for (char bit : code) {
+            bits.writeBit(bit == '1' ? 1 : 0);
+        }
+    }
+
+    writeU64(output, bits.size());
+
+    const std::vector<uint8_t>& packed = bits.getData();
+    output.insert(output.end(), packed.begin(), packed.end());
+
+    return output;
+}
+
+std::vector<uint8_t> huffman::decompress(const std::vector<uint8_t>& input) {
+
+    std::vector<uint8_t> output;
+
+    if (input.size() < 2) {
+        return output;
+    }
+
+    size_t pos = 0;
+    uint16_t symbolCount = readU16(input, pos);
+    pos += 2;
+
+    if (symbolCount > 256) {
+        std::cerr << "Huffman: corrupt data (invalid symbol count)" << std::endl;
+        return output;
+    }
+
+    frequencies.fill(0);
+    uint64_t totalSymbols = 0;
+
+    for (uint16_t i = 0; i < symbolCount; i++) {
+        if (pos + 9 > input.size()) {
+            std::cerr << "Huffman: corrupt data (truncated frequency table)" << std::endl;
+            return output;
+        }
+        uint8_t symbol = input[pos];
+        uint64_t freq = readU64(input, pos + 1);
+        pos += 9;
+        frequencies[symbol] = freq;
+        totalSymbols += freq;
+    }
+
+    if (symbolCount == 0) {
+        return output;
+    }
+
+    if (pos + 8 > input.size()) {
+        std::cerr << "Huffman: corrupt data (missing bit count)" << std::endl;
+        return output;
+    }
+    uint64_t bitCount = readU64(input, pos);
+    pos += 8;
+
+    if (bitCount > (input.size() - pos) * 8) {
+        std::cerr << "Huffman: corrupt data (bit count exceeds payload)" << std::endl;
+        return output;
+    }
+
+    if (totalSymbols > bitCount) {
+        std::cerr << "Huffman: corrupt data (symbol count exceeds bit count)" << std::endl;
+        return output;
+    }
+
+    buildHuffmanTree();
+
+    std::vector<uint8_t> packed(input.begin() + pos, input.end());
+    bitstream bits(packed, bitCount);
+
+    output.reserve(totalSymbols);
+
+    if (root->left == nullptr && root->right == nullptr) {
+        for (uint64_t i = 0; i < totalSymbols; i++) {
+            output.push_back(root->ch);
+        }
+        return output;
+    }
+
     node* curr = root;
-    for (char bit : text) {
-        if (bit == '0') {
-            curr = curr->left;
-        }else {
-            curr = curr->right;
+    while (output.size() < totalSymbols) {
+        int bit = bits.readBit();
+        if (bit < 0) {
+            std::cerr << "Huffman: corrupt data (bit stream ended early)" << std::endl;
+            break;
+        }
+        curr = (bit == 0) ? curr->left : curr->right;
+        if (curr == nullptr) {
+            std::cerr << "Huffman: corrupt data (invalid code path)" << std::endl;
+            break;
         }
         if (curr->left == nullptr && curr->right == nullptr) {
-            finalText += curr->ch;
+            output.push_back(curr->ch);
             curr = root;
         }
     }
-    ofstream out(outputF.c_str());
-    if (!out.is_open()) {
-        cerr << "Could not open file " << outputF << endl;
+
+    return output;
+}
+
+void huffman::compressFile(const std::string& inputF, const std::string& outputF) {
+
+    std::ifstream in(inputF, std::ios::binary);
+    if (!in.is_open()) {
+        std::cerr << "Could not open file " << inputF << std::endl;
         return;
     }
-    out << finalText;
+    std::vector<uint8_t> data(
+        (std::istreambuf_iterator<char>(in)),
+        (std::istreambuf_iterator<char>())
+    );
+    in.close();
+
+    std::vector<uint8_t> compressed = compress(data);
+
+    std::ofstream out(outputF, std::ios::binary);
+    if (!out.is_open()) {
+        std::cerr << "Could not open file " << outputF << std::endl;
+        return;
+    }
+    out.write(reinterpret_cast<const char*>(compressed.data()),
+              static_cast<std::streamsize>(compressed.size()));
     out.close();
-    cout << "The file is successfully decompressed" << endl;
+    std::cout << "The file is successfully compressed" << std::endl;
+}
+
+void huffman::decompressFile(const std::string& inputF, const std::string& outputF) {
+
+    std::ifstream in(inputF, std::ios::binary);
+    if (!in.is_open()) {
+        std::cerr << "Could not open file " << inputF << std::endl;
+        return;
+    }
+    std::vector<uint8_t> data(
+        (std::istreambuf_iterator<char>(in)),
+        (std::istreambuf_iterator<char>())
+    );
+    in.close();
+
+    std::vector<uint8_t> decompressed = decompress(data);
+
+    std::ofstream out(outputF, std::ios::binary);
+    if (!out.is_open()) {
+        std::cerr << "Could not open file " << outputF << std::endl;
+        return;
+    }
+    out.write(reinterpret_cast<const char*>(decompressed.data()),
+              static_cast<std::streamsize>(decompressed.size()));
+    out.close();
+    std::cout << "The file is successfully decompressed" << std::endl;
 }

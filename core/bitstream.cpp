@@ -1,12 +1,18 @@
-//
-// Created by IliyaD on 26.02.2026.
-//
-
 #include "bitstream.h"
 
 bitstream::bitstream() {
     totalBits = 0;
     readPosition = 0;
+}
+
+bitstream::bitstream(const std::vector<uint8_t>& bytes, size_t bitCount) {
+    data = bytes;
+    totalBits = bitCount;
+    readPosition = 0;
+
+    if (totalBits > data.size() * 8) {
+        totalBits = data.size() * 8;
+    }
 }
 
 void bitstream::writeBit(int bit) {
@@ -16,8 +22,8 @@ void bitstream::writeBit(int bit) {
     }
 
     if (bit == 1) {
-        int byteIndex = totalBits / 8;
-        int bitIndex  = 7 - (totalBits % 8);
+        size_t byteIndex = totalBits / 8;
+        int bitIndex = 7 - static_cast<int>(totalBits % 8);
 
         data[byteIndex] |= (1 << bitIndex);
     }
@@ -38,8 +44,8 @@ int bitstream::readBit() {
         return -1;
     }
 
-    int byteIndex = readPosition / 8;
-    int bitIndex  = 7 - (readPosition % 8);
+    size_t byteIndex = readPosition / 8;
+    int bitIndex = 7 - static_cast<int>(readPosition % 8);
 
     readPosition++;
 
@@ -50,7 +56,7 @@ bool bitstream::isEmpty() {
     return readPosition >= totalBits;
 }
 
-int bitstream::size() {
+size_t bitstream::size() {
     return totalBits;
 }
 
@@ -58,4 +64,8 @@ void bitstream::clear() {
     data.clear();
     totalBits = 0;
     readPosition = 0;
+}
+
+const std::vector<uint8_t>& bitstream::getData() const {
+    return data;
 }
